@@ -1,0 +1,62 @@
+var guess = 0;
+var display;
+
+document.addEventListener("DOMContentLoaded", () => {
+  display = document.querySelector("div[class*='titleText']");
+
+  if (!display) {
+    console.warn("Display element not found. Using fallback.");
+    // Optional: create a fallback display element
+    display = document.createElement("div");
+    display.style.position = "fixed";
+    display.style.top = "10px";
+    display.style.left = "10px";
+    display.style.padding = "10px";
+    display.style.background = "rgba(0,0,0,0.7)";
+    display.style.color = "#fff";
+    display.style.zIndex = 9999;
+    document.body.appendChild(display);
+  }
+
+  tryFindGame(); // Start after DOM is ready and display is set
+});
+
+function reactHandler() {
+  return Object.values((function react(r = document.querySelector("body>div")) {
+    return Object.values(r)[1]?.children?.[0]?._owner?.stateNode ? r : react(r.querySelector(":scope>div"));
+  })())[1].children[0]._owner.stateNode;
+}
+
+function generateRandomId() {
+  return Math.floor(Math.random() * 9000000) + 1000000;
+}
+
+function tryFindGame() {
+  const randomId = generateRandomId();
+  const url = `https://fb.blooket.com/c/firebase/id?id=${randomId}`;
+
+  fetch(url, {
+    method: 'GET',
+    credentials: 'include',
+  })
+    .then(response => response.json())
+    .then(data => {
+      guess++;
+      if (display) display.innerHTML = `Guesses: ${guess}`;
+
+      if (data.success === true) {
+        console.log("✅ Game found:", randomId);
+        if (display) display.innerHTML = `🎯 Game Found: ${randomId}`;
+        const handler = reactHandler();
+        handler.setState({ client: { hostId: randomId.toString() } });
+        handler.onJoin();
+      } else {
+        console.log("❌ No game for:", randomId);
+        setTimeout(tryFindGame, 300);
+      }
+    })
+    .catch(error => {
+      console.error("Fetch error:", error);
+      setTimeout(tryFindGame, 1000);
+    });
+}
